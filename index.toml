@@ -69,13 +69,13 @@ children = ["p1", "p2"]
 class = "content"
 
 [p1]
-children = ["This is a clean and structured HTML page generated from TOML."]
+children = ["This is a clean and structured HTML page generated from TOML. "]
 
 [p2]
-children = ["Try editing the ", "code", " yourself!"]
+children = ["Try editing ", "code", " yourself!"]
 
 [code]
-children = ["TOML"]
+children = ["index.toml"]
 class = "inline-code"
 
 [footer]

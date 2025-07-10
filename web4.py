@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 pip install -r requirements.txt # DO NOT FORGET TO DO THIS
@@ -11,6 +11,9 @@ import sys
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 import argparse
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import time
 
 """
 license 2025 (c)
@@ -21,6 +24,57 @@ usage: just do `python web4.py --man`
 
 ~smv
 """
+
+
+class TomlChangeHandler(FileSystemEventHandler):
+    def __init__(self, toml_path: Path):
+        self.toml_path = toml_path.resolve()
+
+    def on_modified(self, event):
+        if Path(event.src_path).resolve() == self.toml_path:
+            print(f"[watch] Change detected in {self.toml_path.name}, regenerating...")
+            try:
+                write_html(self.toml_path)
+            except Exception as e:
+                print(f"[watch] Error: {e}")
+
+def watch_file(toml_path: Path):
+    event_handler = TomlChangeHandler(toml_path)
+    observer = Observer()
+    observer.schedule(event_handler, toml_path.parent, recursive=False)
+    observer.start()
+    print(f"[watch] Watching {toml_path.name} for changes.")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n[watch] Stopping.")
+        observer.stop()
+    observer.join()
+
+class CustomHandler(SimpleHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+def start_server(port=8080):
+    httpd = HTTPServer(("", port), CustomHandler)
+    print(f"Serving! At http://localhost:{port}")
+    httpd.serve_forever()
+
+def serve_file(file: Path, port=8080):
+    from threading import Thread
+    import webbrowser
+    import time
+
+    server_thread = Thread(target=start_server)
+    server_thread.start()
+
+    webbrowser.open(f"http://localhost:{port}/{file.name}")
+
+    try:
+        server_thread.join()  # wait forever
+    except KeyboardInterrupt:
+        print("\nShutting down server.")
 
 
 def parse_element(name, data, tree):
@@ -72,21 +126,6 @@ def write_html(toml_path: Path):
     print(f"Generated: {output_file}")
 
 
-def serve_file(file: Path, port=8080):
-    from threading import Thread
-    import webbrowser
-
-    class CustomHandler(SimpleHTTPRequestHandler):
-        def log_message(self, *args):
-            pass
-
-    def start_server():
-        httpd = HTTPServer(("", port), CustomHandler)
-        print(f"Serving! At http://localhost:{port}")
-        httpd.serve_forever()
-
-    Thread(target=start_server, daemon=True).start()
-    webbrowser.open(f"http://localhost:{port}/{file.name}")
 
 
 # cookie points to myself for this
@@ -100,11 +139,10 @@ NAME
     web4 -  The future of the internet.
 
             Just kidding. This revolutionary software enables you to
-            quite transpile... TOML. To HTML. Yeah. The future of the
-            web, people.
+            transpile TOML to HTML. Yep, it's Web4.
 
 SYNOPSIS
-    web4 FILE.toml [--serve]
+    web4 FILE.toml [--serve] [--watch]
     web4 --man
 
 DESCRIPTION
@@ -116,7 +154,11 @@ DESCRIPTION
 
 OPTIONS
     --serve
-        Serve the resulting HTML using Python's HTTP server.
+        Serve the resulting HTML using Python's HTTP server on port 8080.
+
+    --watch
+        Watch the TOML file for changes. Automatically regenerates
+        HTML on save.
 
     --man
         Show this manpage and exit.
@@ -136,7 +178,7 @@ EXAMPLES
         children = ["html"]
 
         [html]
-        children = "head, body" -- this works too!
+        children = "head, body"
 
         [head]
         children = ["title"]
@@ -192,11 +234,26 @@ if len(sys.argv) == 1 or "--man" in sys.argv or "--help" in sys.argv:
     sys.exit(0)
 parser.add_argument("files", nargs="+", help="Input TOML file(s)")
 parser.add_argument("--serve", action="store_true", help="Serve the resulting HTML")
+parser.add_argument(
+    "--watch",
+    action="store_true",
+    help="Watch TOML file for changes and rebuild on change",
+)
 
 args = parser.parse_args()
 
 for f in args.files:
     path = Path(f)
     write_html(path)
-    if args.serve:
+
+    if args.serve and args.watch:
+        # Watch and serve
+        from threading import Thread
+
+        Thread(target=serve_file, args=(path.with_suffix(".html"),), daemon=True).start()
+        watch_file(path)
+    elif args.serve:
         serve_file(path.with_suffix(".html"))
+    elif args.watch:
+        watch_file(path)
+
