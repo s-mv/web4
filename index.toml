@@ -1,0 +1,87 @@
+[root]
+children = ["html"]
+
+[html]
+children = ["head", "body"]
+
+[head]
+children = ["meta", "title", "style"]
+
+[meta]
+charset = "UTF-8"
+
+[title]
+children = ["A Beautiful TOML Page"]
+
+[style]
+children = ["""
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #fdfdfd;
+  color: #333;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+  line-height: 1.6;
+}
+header.site-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+header.site-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.2rem;
+}
+.site-nav {
+  font-size: 1rem;
+  color: #555;
+}
+.inline-code {
+  font-family: monospace;
+  background: #f0f0f0;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+footer.footer {
+  margin-top: 3rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #888;
+}
+"""]
+
+[body]
+children = ["header", "main", "footer"]
+
+[header]
+children = ["h1", "nav"]
+class = "site-header"
+
+[h1]
+children = ["Welcome to Web4"]
+
+[nav]
+children = ["Home", " | ", "About", " | ", "Contact"]
+class = "site-nav"
+
+[main]
+children = ["p1", "p2"]
+class = "content"
+
+[p1]
+children = ["This is a clean and structured HTML page generated from TOML."]
+
+[p2]
+children = ["Try editing the ", "code", " yourself!"]
+
+[code]
+children = ["TOML"]
+class = "inline-code"
+
+[footer]
+children = ["p3"]
+class = "footer"
+
+[p3]
+children = ["(c) 2025 smv. Powered by Web4."]
+
