@@ -103,7 +103,7 @@ Generates:
 ### Attributes
 
 ```toml
-[div#main]
+["div#main"] # TOML limitations require us to use quotes
 class = "container"
 children = ["p"]
 ```

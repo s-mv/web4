@@ -14,6 +14,7 @@ import argparse
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
+import re
 
 """
 license 2025 (c)
@@ -38,6 +39,49 @@ class TomlChangeHandler(FileSystemEventHandler):
             except Exception as e:
                 print(f"[watch] Error: {e}")
 
+
+def parse_tag_name(raw_name):
+    tag = raw_name
+    el_id = None
+    classes = []
+
+    match = re.match(
+        r"^([a-zA-Z0-9]+)?(?:#([a-zA-Z0-9_-]+))?(?:\.([a-zA-Z0-9_.-]+))?$", raw_name
+    )
+    if match:
+        tag, el_id, class_str = match.groups()
+        if class_str:
+            classes = class_str.split(".")
+    return tag or "div", el_id, classes
+
+
+def parse_element(name, data, tree):
+    tag_name, el_id, classes = parse_tag_name(name)
+
+    attrs = ""
+    if el_id:
+        attrs += f' id="{el_id}"'
+    if classes:
+        attrs += f' class="{" ".join(classes)}"'
+
+    for key, value in data.items():
+        if key not in ("children",):
+            attrs += f' {key}="{value}"'
+
+    children_html = ""
+    children = data.get("children", [])
+    if isinstance(children, str):
+        children = [c.strip() for c in children.split(",")]
+
+    for child in children:
+        if child in tree:
+            children_html += parse_element(child, tree[child], tree)
+        else:
+            children_html += str(child)
+
+    return f"<{tag_name}{attrs}>{children_html}</{tag_name}>"
+
+
 def watch_file(toml_path: Path):
     event_handler = TomlChangeHandler(toml_path)
     observer = Observer()
@@ -52,14 +96,17 @@ def watch_file(toml_path: Path):
         observer.stop()
     observer.join()
 
+
 class CustomHandler(SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
+
 
 def start_server(port=8080):
     httpd = HTTPServer(("", port), CustomHandler)
     print(f"Serving! At http://localhost:{port}")
     httpd.serve_forever()
+
 
 def serve_file(file: Path, port=8080):
     from threading import Thread
@@ -77,28 +124,6 @@ def serve_file(file: Path, port=8080):
         print("\nShutting down server.")
 
 
-def parse_element(name, data, tree):
-    attrs = ""
-    children_html = ""
-
-    for key, value in data.items():
-        if key != "children":
-            attrs += f' {key}="{value}"'
-
-    children = data.get("children", [])
-    if isinstance(children, str):
-        # children CAN be fallback strings
-        children = [c.strip() for c in children.split(",")]
-
-    for child in children:
-        if child in tree:
-            children_html += parse_element(child, tree[child], tree)
-        else:
-            children_html += str(child)  # treat as plain text
-
-    return f"<{name}{attrs}>{children_html}</{name}>"
-
-
 def toml_to_html(toml_file: Path) -> str:
     tree = toml.load(toml_file)
 
@@ -110,7 +135,7 @@ def toml_to_html(toml_file: Path) -> str:
     if isinstance(children, str):
         children = [c.strip() for c in children.split(",")]
 
-    html = ""
+    html = "<!DOCTYPE html>"
     for child in children:
         if child in tree:
             html += parse_element(child, tree[child], tree)
@@ -124,8 +149,6 @@ def write_html(toml_path: Path):
     output_file = toml_path.with_suffix(".html")
     output_file.write_text(html)
     print(f"Generated: {output_file}")
-
-
 
 
 # cookie points to myself for this
@@ -250,10 +273,11 @@ for f in args.files:
         # Watch and serve
         from threading import Thread
 
-        Thread(target=serve_file, args=(path.with_suffix(".html"),), daemon=True).start()
+        Thread(
+            target=serve_file, args=(path.with_suffix(".html"),), daemon=True
+        ).start()
         watch_file(path)
     elif args.serve:
         serve_file(path.with_suffix(".html"))
     elif args.watch:
         watch_file(path)
-

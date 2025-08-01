@@ -15,12 +15,26 @@ children = ["A Beautiful TOML Page"]
 
 [style]
 children = ["""
-body {
+* {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
   font-family: 'Segoe UI', sans-serif;
   background: #fdfdfd;
   color: #333;
+}
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+}
+.container {
+  width: 100%;
   max-width: 800px;
-  margin: 2rem auto;
   padding: 1rem;
   line-height: 1.6;
 }
@@ -45,13 +59,27 @@ header.site-header h1 {
 footer.footer {
   margin-top: 3rem;
   text-align: center;
-  font-size: 0.9rem;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0.8rem;
   color: #888;
+}
+a {
+  color: #555;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
 }
 """]
 
 [body]
+children = ["container"]
+
+[container]
 children = ["header", "main", "footer"]
+class = "container"
 
 [header]
 children = ["h1", "nav"]
@@ -79,9 +107,16 @@ children = ["index.toml"]
 class = "inline-code"
 
 [footer]
-children = ["p3"]
+children = ["p3", "p4"]
 class = "footer"
 
 [p3]
 children = ["(c) 2025 smv. Powered by Web4."]
+
+[p4]
+children = ["View at ", "a#gh-link"]
+
+["a#gh-link"]
+children = ["s-mv/web4"]
+href = "https://github.com/s-mv/web4"
 
